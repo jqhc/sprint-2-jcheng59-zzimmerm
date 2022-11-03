@@ -1,12 +1,10 @@
-#Project name: API Proxy
+# Project name: API Proxy
 
 Team members and contributions: Zoe Zimmermann (zzimmerm), Justin Cheng (jcheng59)
 
 Total estimated time it took to complete project: 10 hours
 
-A link to your repo: https://github.com/cs0320-f2022/sprint-2-jcheng59-zzimmerm
-
-###Explain the relationships between classes/interfaces: 
+### Explain the relationships between classes/interfaces: 
 The Server class holds the main functionality of our API server. By constructing a server and adding datasources,
 it calls Spark and sets everything up on the network.
 
@@ -15,12 +13,12 @@ CSVLoadHandler uploads the uploaded CSV data into a Storage object. CSVGetHandle
 
 We also created BadEndpointHandler to handle invalid requests to our API (i.e. non-existent endpoints).
 
-###Discuss any specific data structures you used, why you created it, and other high level explanations.
+### Discuss any specific data structures you used, why you created it, and other high level explanations.
 We created the HandlerWithStorage interface to ensure that datasources with support for storage are passed to the addLoadGetDatasource.
 CSVGetHandler and CSVLoadHandler both implement this interface.
 
 
-###Tests -- Explain the testing suites that you implemented for your program and how each test ensures that a part of the program works.
+### Tests -- Explain the testing suites that you implemented for your program and how each test ensures that a part of the program works.
 Within the testServer test file, we test the functionality of CSVGetHandler, CSVLoadHandler, and WeatherHandler.
 For WeatherHandler, we test that we accurately access the NWS weather data for a given location. 
 We also test that our errors (no coordinates inputted, coordinates outside of the US, and coordinates not inputted as floats) are handled correctly.
@@ -31,10 +29,10 @@ We also did unit testing for WeatherHandler in TestWeather, for each method of W
 
 Our tests cover each discrete function of our programs individually (unit testing). Each time we run our tests, it starts our server and uses our API (integration testing).
 
-###How to run the tests you wrote/were provided:
+### How to run the tests you wrote/were provided:
 Open your terminal, navigate to the project directory, type `mvn run` and press enter!
 
-###How to build and run your program:
+### How to build and run your program:
 * Run Main, which starts a server on your computer
 * Access one of the following URLs through a browser: 
   * localhost:3232/weather?lat=[add latitude here]&lon=[add longitude here]
