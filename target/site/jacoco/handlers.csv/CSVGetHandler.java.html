@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVGetHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">moshi</a> &gt; <a href="index.source.html" class="el_package">handlers.csv</a> &gt; <span class="el_source">CSVGetHandler.java</span></div><h1>CSVGetHandler.java</h1><pre class="source lang-java linenums">package handlers.csv;
+
+import com.squareup.moshi.Moshi;
+import java.util.List;
+import server.handler.HandlerWithStorage;
+import server.storage.FileNotLoadedException;
+import server.storage.Storage;
+import spark.Request;
+import spark.Response;
+
+public class CSVGetHandler implements HandlerWithStorage&lt;List&lt;List&lt;String&gt;&gt;&gt; {
+
+  Storage&lt;List&lt;List&lt;String&gt;&gt;&gt; storage;
+
+<span class="fc" id="L15">  public CSVGetHandler() {}</span>
+
+  /**
+   * Handles requests for getting a CSV file. Gets data from storage object
+   *
+   * @param request
+   * @param response
+   * @return a response with the CSV contents
+   * @throws Exception
+   */
+  @Override
+  public Object handle(Request request, Response response) throws Exception {
+    List&lt;List&lt;String&gt;&gt; csv2d;
+    try {
+<span class="fc" id="L29">      csv2d = this.storage.getData();</span>
+<span class="fc" id="L30">      return new GetFileResponse(csv2d).serialize();</span>
+<span class="fc" id="L31">    } catch (FileNotLoadedException e) {</span>
+<span class="fc" id="L32">      return new FileNotLoadedResponse().serialize();</span>
+    }
+  }
+
+  /**
+   * Setter for handler's storage object
+   *
+   * @param storage
+   */
+  @Override
+  public void setStorage(Storage&lt;List&lt;List&lt;String&gt;&gt;&gt; storage) {
+<span class="fc" id="L43">    this.storage = storage;</span>
+<span class="fc" id="L44">  }</span>
+
+  /*
+  Response messages for errors or success
+   */
+<span class="fc" id="L49">  public record GetFileResponse(String result, List&lt;List&lt;String&gt;&gt; data, String message) {</span>
+    public GetFileResponse(List&lt;List&lt;String&gt;&gt; csv2d) {
+<span class="fc" id="L51">      this(&quot;success&quot;, csv2d, &quot;Successfully retrieved CSV.&quot;);</span>
+<span class="fc" id="L52">    }</span>
+
+    String serialize() {
+<span class="fc" id="L55">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L56">      return moshi.adapter(GetFileResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L60">  public record FileNotLoadedResponse(String result, String message) {</span>
+    public FileNotLoadedResponse() {
+<span class="fc" id="L62">      this(</span>
+          &quot;error_datasource&quot;,
+          &quot;You haven't loaded a file yet! To do so, &quot;
+              + &quot;access the endpoint 'loadcsv' and provide a filepath as a parameter.&quot;);
+<span class="fc" id="L66">    }</span>
+
+    String serialize() {
+<span class="fc" id="L69">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L70">      return moshi.adapter(FileNotLoadedResponse.class).toJson(this);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVLoadHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">moshi</a> &gt; <a href="index.source.html" class="el_package">handlers.csv</a> &gt; <span class="el_source">CSVLoadHandler.java</span></div><h1>CSVLoadHandler.java</h1><pre class="source lang-java linenums">package handlers.csv;
+
+import com.squareup.moshi.Moshi;
+import csv.ParseBot;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.List;
+import server.handler.HandlerWithStorage;
+import server.storage.Storage;
+import spark.Request;
+import spark.Response;
+
+public class CSVLoadHandler implements HandlerWithStorage&lt;List&lt;List&lt;String&gt;&gt;&gt; {
+
+  Storage&lt;List&lt;List&lt;String&gt;&gt;&gt; storage;
+
+<span class="fc" id="L18">  public CSVLoadHandler() {}</span>
+
+  /**
+   * Handles request for loading a CSV file.
+   *
+   * @param request
+   * @param response
+   * @return Appropriate response for errors or success
+   * @throws Exception
+   */
+  @Override
+  public Object handle(Request request, Response response) throws Exception {
+<span class="fc" id="L30">    String filepath = request.queryParams(&quot;filepath&quot;);</span>
+    // if no filepath is provided, show error message
+<span class="fc bfc" id="L32" title="All 2 branches covered.">    if (filepath == null) {</span>
+<span class="fc" id="L33">      return new NoFilepathResponse().serialize();</span>
+    }
+
+    // if file is not found, show error message
+    FileReader reader;
+    try {
+<span class="fc" id="L39">      reader = new FileReader(filepath);</span>
+<span class="fc" id="L40">    } catch (FileNotFoundException e) {</span>
+<span class="fc" id="L41">      return new InvalidFilepathResponse(filepath).serialize();</span>
+<span class="fc" id="L42">    }</span>
+
+<span class="fc" id="L44">    ParseBot parser = new ParseBot(reader, new RawCreator(), false);</span>
+    List&lt;List&lt;String&gt;&gt; csv2d;
+    // If the BufferedReader throws an IOException while reading the file,
+    // show error message
+    try {
+<span class="fc" id="L49">      csv2d = parser.parse();</span>
+<span class="nc" id="L50">    } catch (IOException e) {</span>
+<span class="nc" id="L51">      return new ErrorReadingFileResponse(filepath).serialize();</span>
+<span class="fc" id="L52">    }</span>
+
+<span class="fc" id="L54">    this.storage.loadData(csv2d);</span>
+<span class="fc" id="L55">    return new SuccessReadingFileResponse(filepath).serialize();</span>
+  }
+
+  /**
+   * Setter for handler's storage object
+   *
+   * @param storage
+   */
+  @Override
+  public void setStorage(Storage&lt;List&lt;List&lt;String&gt;&gt;&gt; storage) {
+<span class="fc" id="L65">    this.storage = storage;</span>
+<span class="fc" id="L66">  }</span>
+
+  /*
+  Response messages for errors or success
+  */
+<span class="fc" id="L71">  public record SuccessReadingFileResponse(String result, String filepath, String message) {</span>
+    public SuccessReadingFileResponse(String filepath) {
+<span class="fc" id="L73">      this(</span>
+          &quot;success&quot;,
+          filepath,
+          &quot;Successfully loaded '&quot;
+              + filepath
+              + &quot;'! Access the endpoint &quot;
+              + &quot;'getcsv' to get the contents of the file.&quot;);
+<span class="fc" id="L80">    }</span>
+
+    String serialize() {
+<span class="fc" id="L83">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L84">      return moshi.adapter(SuccessReadingFileResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="nc" id="L88">  public record ErrorReadingFileResponse(String result, String filepath, String message) {</span>
+    public ErrorReadingFileResponse(String filepath) {
+<span class="nc" id="L90">      this(</span>
+          &quot;error_datasource&quot;,
+          filepath,
+          &quot;There was an error reading '&quot; + filepath + &quot;'. Try again!&quot;);
+<span class="nc" id="L94">    }</span>
+
+    String serialize() {
+<span class="nc" id="L97">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="nc" id="L98">      return moshi.adapter(ErrorReadingFileResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L102">  public record InvalidFilepathResponse(String result, String filepath, String message) {</span>
+    public InvalidFilepathResponse(String filepath) {
+<span class="fc" id="L104">      this(&quot;error_datasource&quot;, filepath, &quot;File '&quot; + filepath + &quot;' not found.&quot;);</span>
+<span class="fc" id="L105">    }</span>
+
+    String serialize() {
+<span class="fc" id="L108">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L109">      return moshi.adapter(InvalidFilepathResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L113">  public record NoFilepathResponse(String result, String message) {</span>
+    public NoFilepathResponse() {
+<span class="fc" id="L115">      this(</span>
+          &quot;error_bad_request&quot;,
+          &quot;No filepath provided. Specify filepath by &quot;
+              + &quot;adding '?filepath=[insert filepath]' to the end of the URL.&quot;);
+<span class="fc" id="L119">    }</span>
+
+    String serialize() {
+<span class="fc" id="L122">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L123">      return moshi.adapter(NoFilepathResponse.class).toJson(this);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

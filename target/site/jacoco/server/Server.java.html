@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Server.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">moshi</a> &gt; <a href="index.source.html" class="el_package">server</a> &gt; <span class="el_source">Server.java</span></div><h1>Server.java</h1><pre class="source lang-java linenums">package server;
+
+import static spark.Spark.after;
+
+import java.util.ArrayList;
+import server.handler.HandlerWithStorage;
+import server.storage.Storage;
+import spark.Route;
+import spark.Spark;
+
+/** A class representing the server. */
+public class Server {
+  private final int portID;
+  private ArrayList&lt;String&gt; endpoints;
+
+<span class="fc" id="L16">  public Server(int portID) {</span>
+<span class="fc" id="L17">    this.endpoints = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L18">    this.portID = portID;</span>
+<span class="fc" id="L19">    Spark.port(portID);</span>
+
+<span class="fc" id="L21">    after(</span>
+        (request, response) -&gt; {
+<span class="fc" id="L23">          response.header(&quot;Access-Control-Allow-Origin&quot;, &quot;*&quot;);</span>
+<span class="fc" id="L24">          response.header(&quot;Access-Control-Allow-Methods&quot;, &quot;*&quot;);</span>
+<span class="fc" id="L25">        });</span>
+<span class="fc" id="L26">  }</span>
+
+  /**
+   * Sets up the storage and datasource for the getHandler and the loadHandler
+   *
+   * @param datasourceName the datasource to load/get
+   * @param loadHandler the load handler
+   * @param getHandler the get handler
+   * @param storage a storage object for communication between the get and load handlers
+   * @param &lt;S&gt;
+   */
+  public &lt;S&gt; void addLoadGetDatasource(
+      String datasourceName,
+      HandlerWithStorage&lt;S&gt; loadHandler,
+      HandlerWithStorage&lt;S&gt; getHandler,
+      Storage&lt;S&gt; storage) {
+    // set unified storage for load and get handlers
+<span class="fc" id="L43">    loadHandler.setStorage(storage);</span>
+<span class="fc" id="L44">    getHandler.setStorage(storage);</span>
+    // TODO: add defensive copying
+    // creates load and get endpoints
+<span class="fc" id="L47">    Spark.get(&quot;load&quot; + datasourceName, loadHandler);</span>
+<span class="fc" id="L48">    Spark.get(&quot;get&quot; + datasourceName, getHandler);</span>
+
+<span class="fc" id="L50">    this.endpoints.add(&quot;load&quot; + datasourceName);</span>
+<span class="fc" id="L51">    this.endpoints.add(&quot;get&quot; + datasourceName);</span>
+<span class="fc" id="L52">  }</span>
+
+  /**
+   * Adds a datasource to the endpoints of the server
+   *
+   * @param datasourceName
+   * @param handler
+   */
+  public void addDatasource(String datasourceName, Route handler) {
+<span class="fc" id="L61">    Spark.get(datasourceName, handler);</span>
+<span class="fc" id="L62">    this.endpoints.add(datasourceName);</span>
+<span class="fc" id="L63">  }</span>
+
+  /** Starts the server */
+  public void start() {
+<span class="fc" id="L67">    Spark.init();</span>
+<span class="fc" id="L68">    Spark.awaitInitialization();</span>
+
+<span class="fc" id="L70">    System.out.println(&quot;Server started.&quot;);</span>
+<span class="fc" id="L71">  }</span>
+
+  /** Ends the server */
+  public void stop() {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">    for (String endpoint : this.endpoints) {</span>
+<span class="fc" id="L76">      Spark.unmap(endpoint);</span>
+<span class="fc" id="L77">      Spark.stop();</span>
+<span class="fc" id="L78">      Spark.awaitStop();</span>
+<span class="fc" id="L79">    }</span>
+<span class="fc" id="L80">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

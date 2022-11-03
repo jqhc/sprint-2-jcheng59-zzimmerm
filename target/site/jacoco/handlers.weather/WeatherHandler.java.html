@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WeatherHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">moshi</a> &gt; <a href="index.source.html" class="el_package">handlers.weather</a> &gt; <span class="el_source">WeatherHandler.java</span></div><h1>WeatherHandler.java</h1><pre class="source lang-java linenums">package handlers.weather;
+
+import com.squareup.moshi.Moshi;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import spark.Request;
+import spark.Response;
+import spark.Route;
+
+<span class="fc" id="L15">public class WeatherHandler implements Route {</span>
+
+  /**
+   * Handles a weather request. Checks that input is valid and passes input to returnResponse
+   *
+   * @param request
+   * @param response
+   * @return the result from passing the coordinates to returnReponse
+   * @throws Exception
+   */
+  @Override
+  public Object handle(Request request, Response response) throws Exception {
+<span class="fc" id="L27">    String lat = request.queryParams(&quot;lat&quot;);</span>
+<span class="fc" id="L28">    String lon = request.queryParams(&quot;lon&quot;);</span>
+
+    // if fields not provided, show error message
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">    if (lat == null || lon == null) {</span>
+<span class="fc" id="L32">      return new NoLatLonResponse().serialize();</span>
+    }
+
+    // checks that both lat and lon are valid floats
+    float latFloat;
+    float lonFloat;
+    try {
+<span class="fc" id="L39">      latFloat = Float.parseFloat(lat);</span>
+<span class="fc" id="L40">      lonFloat = Float.parseFloat(lon);</span>
+<span class="fc" id="L41">    } catch (NumberFormatException e) {</span>
+<span class="fc" id="L42">      return new LatLonNotFloatsResponse(lat, lon).serialize();</span>
+<span class="fc" id="L43">    }</span>
+
+    // getting response for point
+<span class="fc" id="L46">    HttpResponse&lt;String&gt; locationResponse =</span>
+<span class="fc" id="L47">        getAPIResponse(&quot;https://api.weather.gov/points/&quot; + lat + &quot;,&quot; + lon);</span>
+
+<span class="fc" id="L49">    return getLocationResponse(locationResponse, latFloat, lonFloat);</span>
+  }
+
+  /**
+   * Gets the location information for inputted coordinates. Passes data to getForecast
+   *
+   * @param httpResponse the HTTP response from NWS's API
+   * @param lat
+   * @param lon
+   * @return Error responses for error codes 400 and 404. Otherwise, result from getForecast
+   * @throws Exception
+   */
+  public static String getLocationResponse(HttpResponse&lt;String&gt; httpResponse, float lat, float lon)
+      throws Exception {
+<span class="fc" id="L63">    int statusCode = httpResponse.statusCode();</span>
+
+<span class="fc bfc" id="L65" title="All 2 branches covered.">    if (statusCode == 400) { // invalid latitude and longitude coordinates</span>
+<span class="fc" id="L66">      return new InvalidCoordsResponse(lat, lon).serialize();</span>
+
+<span class="fc bfc" id="L68" title="All 2 branches covered.">    } else if (statusCode == 404) { // NWS doesn't have data for specified coordinates</span>
+<span class="fc" id="L69">      return new NWSNoDataForCoordsResponse(lat, lon).serialize();</span>
+
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">    } else if (statusCode == 200) { // success</span>
+      // parse body into NWSPoints with moshi
+<span class="fc" id="L73">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L74">      NWSPoints nwsPoints = moshi.adapter(NWSPoints.class).fromJson(httpResponse.body());</span>
+
+<span class="fc" id="L76">      return getForecast(nwsPoints, lat, lon);</span>
+
+    } else { // unknown error (likely code 500)
+<span class="nc" id="L79">      return new UnspecifiedNWSErrorResponse(lat, lon).serialize();</span>
+    }
+  }
+
+  /**
+   * Gets the next hour's temperature from NWS location data
+   *
+   * @param nwsPoints The location data from NWS
+   * @param lat
+   * @param lon
+   * @return The next hour's temperature from the hourly forecast
+   * @throws Exception
+   */
+  public static String getForecast(NWSPoints nwsPoints, float lat, float lon) throws Exception {
+    // get temperature from hourly forecast
+<span class="fc" id="L94">    HttpResponse&lt;String&gt; weatherResponse = getAPIResponse(nwsPoints.properties().forecastHourly());</span>
+
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">    if (weatherResponse.statusCode() == 500) {</span>
+<span class="nc" id="L97">      return new UnspecifiedNWSErrorResponse(lat, lon).serialize();</span>
+    }
+    // parse body into NWSPoints with moshi
+<span class="fc" id="L100">    Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L101">    NWSHourlyForecast nwsHourlyForecast =</span>
+<span class="fc" id="L102">        moshi.adapter(NWSHourlyForecast.class).fromJson(weatherResponse.body());</span>
+
+    // return the temperature
+<span class="fc" id="L105">    int temperature = nwsHourlyForecast.properties().periods()[0].temperature();</span>
+<span class="fc" id="L106">    return new SuccessWeatherResponse(lat, lon, temperature).serialize();</span>
+  }
+
+  public static HttpResponse&lt;String&gt; getAPIResponse(String uri)
+      throws URISyntaxException, IOException, InterruptedException {
+    // creating request
+<span class="fc" id="L112">    HttpRequest httpRequest = HttpRequest.newBuilder().uri(new URI(uri)).GET().build();</span>
+
+    // sending request and getting response
+<span class="fc" id="L115">    return HttpClient.newBuilder().build().send(httpRequest, BodyHandlers.ofString());</span>
+  }
+
+<span class="fc" id="L118">  public record NWSPoints(NWSPointsProperties properties) {}</span>
+
+<span class="fc" id="L120">  public record NWSPointsProperties(String forecastHourly) {}</span>
+
+<span class="fc" id="L122">  public record NWSHourlyForecast(NWSPHourlyProperties properties) {}</span>
+
+<span class="fc" id="L124">  public record NWSPHourlyProperties(NWSPeriod[] periods) {}</span>
+
+<span class="fc" id="L126">  public record NWSPeriod(int temperature) {}</span>
+
+  // responses
+<span class="fc" id="L129">  public record SuccessWeatherResponse(</span>
+      String result, float lat, float lon, int temperature, String message) {
+    public SuccessWeatherResponse(float lat, float lon, int temperature) {
+<span class="fc" id="L132">      this(</span>
+          &quot;success&quot;,
+          lat,
+          lon,
+          temperature,
+          &quot;The temperature at &quot; + lat + &quot;, &quot; + lon + &quot; is &quot; + temperature + &quot;.&quot;);
+<span class="fc" id="L138">    }</span>
+
+    String serialize() {
+<span class="fc" id="L141">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L142">      return moshi.adapter(SuccessWeatherResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="nc" id="L146">  public record UnspecifiedNWSErrorResponse(String result, float lat, float lon, String message) {</span>
+    public UnspecifiedNWSErrorResponse(float lat, float lon) {
+<span class="nc" id="L148">      this(</span>
+          &quot;error_datasource&quot;,
+          lat,
+          lon,
+          &quot;An unknown error occurred with NWS. Please &quot; + &quot;try again later.&quot;);
+<span class="nc" id="L153">    }</span>
+
+    String serialize() {
+<span class="nc" id="L156">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="nc" id="L157">      return moshi.adapter(UnspecifiedNWSErrorResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L161">  public record NWSNoDataForCoordsResponse(String result, float lat, float lon, String message) {</span>
+    public NWSNoDataForCoordsResponse(float lat, float lon) {
+<span class="fc" id="L163">      this(</span>
+          &quot;error_datasource&quot;,
+          lat,
+          lon,
+          &quot;The National Weather Service could not provide&quot;
+              + &quot; weather information for these coordinates. Try a location in the United States.&quot;);
+<span class="fc" id="L169">    }</span>
+
+    String serialize() {
+<span class="fc" id="L172">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L173">      return moshi.adapter(NWSNoDataForCoordsResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L177">  public record InvalidCoordsResponse(String result, float lat, float lon, String message) {</span>
+    public InvalidCoordsResponse(float lat, float lon) {
+<span class="fc" id="L179">      this(</span>
+          &quot;error_bad_request&quot;,
+          lat,
+          lon,
+          &quot;Invalid latitude and longitude &quot;
+              + &quot;coordinates. Latitude ranges from -90 to 90 and longitude ranges from -180 to 180.&quot;);
+<span class="fc" id="L185">    }</span>
+
+    String serialize() {
+<span class="fc" id="L188">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L189">      return moshi.adapter(InvalidCoordsResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L193">  public record LatLonNotFloatsResponse(String result, String lat, String lon, String message) {</span>
+    public LatLonNotFloatsResponse(String lat, String lon) {
+<span class="fc" id="L195">      this(&quot;error_bad_request&quot;, lat, lon, &quot;Latitude and longitude values &quot; + &quot;should be numbers.&quot;);</span>
+<span class="fc" id="L196">    }</span>
+
+    String serialize() {
+<span class="fc" id="L199">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L200">      return moshi.adapter(LatLonNotFloatsResponse.class).toJson(this);</span>
+    }
+  }
+
+<span class="fc" id="L204">  public record NoLatLonResponse(String result, String message) {</span>
+    public NoLatLonResponse() {
+<span class="fc" id="L206">      this(</span>
+          &quot;error_bad_request&quot;,
+          &quot;No latitude or longitude coordinate provided. &quot;
+              + &quot;Specify by adding '?lat=[latitude]&amp;lon=[longitude]' to the end of the URL.&quot;);
+<span class="fc" id="L210">    }</span>
+
+    String serialize() {
+<span class="fc" id="L213">      Moshi moshi = new Moshi.Builder().build();</span>
+<span class="fc" id="L214">      return moshi.adapter(NoLatLonResponse.class).toJson(this);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,13 @@
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/handlers/csv/CSVGetHandler.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/handlers/csv/CSVLoadHandler.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/csv/creator/CreatorFromRow.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/server/handler/HandlerWithStorage.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/server/Main.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/server/Server.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/csv/creator/FactoryFailureException.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/handlers/BadEndpointHandler.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/server/storage/FileNotLoadedException.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/csv/ParseBot.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/handlers/csv/RawCreator.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/server/storage/Storage.java
+/Users/justin/Desktop/CS32/sprint-2-jcheng59-zzimmerm/src/main/java/handlers/weather/WeatherHandler.java
